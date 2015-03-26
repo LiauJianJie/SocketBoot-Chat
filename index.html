@@ -47,8 +47,8 @@
         position: relative;
         display: block;
         width: 100%;
-        height: 100% !important; // For ipad on IOS7
-        top: 0; // For ipad on IOS7
+        height: 100% !important;
+        top: 0;
         left: 0;
         margin: 0;
         padding: 0;
@@ -94,7 +94,9 @@
             <h4 class="modal-title">What's your name?</h4>
           </div>
           <div class="modal-body">
-            <input type="text" class="form-control" id="nameModal-field" placeholder="My name is..." tabindex="-2">
+            <div class="form-group" id="nameModal-formgroup">
+              <input type="text" class="form-control" id="nameModal-field" placeholder="My name is..." tabindex="-2">
+            </div>
           </div>
           <div class="modal-footer">
             <!-- <button type="button" class="btn btn-default" data-dismiss="modal">Close</button> -->
@@ -109,26 +111,61 @@
       /* SOCKET.IO */
 
       var socket = io();
+      // NICKNAME REQUEST
+      socket.on('nickname-request', function(nicknameReply){
+        if (nicknameReply.nicknameAllowed)
+        {
+          $('#nameModal').modal('hide');
+          nickname = nicknameReply.nickname;
+          socket.emit('user-joined', nickname);
+          $('#m').removeAttr('disabled');
+          $('#nameModal-field').attr('disabled','disabled');
+          $('#m').focus();
+          $('#nameModal-formgroup').removeClass('has-error');
+          $('#nameModal-danger').remove();
+        }
+        else
+        {
+          $('#nameModal-field').removeAttr('disabled');
+          $('#nameModal-formgroup').addClass('has-error');
+          if ($('#nameModal-danger').length < 1)
+          {
+            $('#nameModal-field').after('<span class="help-block" id="nameModal-danger">Nickname is unavailable.</span>');
+          }
+        }
+      });
+      // USER JOINED
+      socket.on('user-joined', function(joinedNickname){
+        _appendMessage('<i><b>' + nickname + '</b>' + ' has joined the chat.</i>');
+      });
+      // SEND MESSAGE
+      socket.on('send-message', function(message){
+        _appendMessage('<b>' + message.nickname + '</b>: ' + message.text);
+      });
+
+      function _appendMessage(message){
+        $('#messages').append('<tr><td>' + message + '</td></tr>');
+        $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
+      }
+
+      /* INPUT FIELD */
+
       $('form').submit(function(){
         if ($('#m').val() && nickname)
         {
-          socket.emit('chat message', '<b>' + nickname + ':</b> ' + $('#m').val());
+          socket.emit('send-message', {
+            nickname: nickname,
+            text: $('#m').val()
+          });
           $('#m').val('');
           $('#m').focus();
         }
         else if (!nickname)
         {
-          askForNickname();
+          _askForNickname();
         }
         return false;
       });
-      socket.on('chat message', function(msg){
-        msg = msg.replace('@' + nickname, '<b style="color: #23527c;">@' + nickname + '</b>');
-        $('#messages').append('<tr><td>' + msg + '</td></tr>');
-        $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
-      });
-
-      /* INPUT FIELD */
 
       $('#m').on('input',function(e){
         if ($('#m').val())
@@ -144,11 +181,11 @@
       /* NICKNAME & MODAL */
 
       var nickname = "";
-      function askForNickname(){
+      function _askForNickname(){
         $('#nameModal').modal('show');
         $('#nameModal-field').focus();
       }
-      askForNickname();
+      _askForNickname();
 
       $('#nameModal-field').on('input',function(e){
         if ($('#nameModal-field').val())
@@ -171,12 +208,8 @@
       $('#nameModal-submit').click( function(){
         if ($('#nameModal-field').val())
         {
-          nickname = $('#nameModal-field').val();
-          $('#nameModal').modal('hide');
-          socket.emit('chat message', '<i><b>' + nickname + '</b> has joined the chat.</i>');
-          $('#m').removeAttr('disabled');
           $('#nameModal-field').attr('disabled','disabled');
-          $('#m').focus();
+          socket.emit('nickname-request', $('#nameModal-field').val());
         }
       });
 
