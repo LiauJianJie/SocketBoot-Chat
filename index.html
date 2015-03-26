@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Socket.IO chat</title>
+    <title>Socket.io Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <!-- /*<style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -21,6 +21,7 @@
         position: fixed;
         bottom: 0;
         width: 100%;
+        border-top: 1px solid #ccc;
       }
       .borderless td, .borderless th {
         border: none !important;
@@ -55,6 +56,8 @@
   </head>
 
   <body>
+
+
     <div id="table-container">
       <table class="table table-hover table-condensed borderless">
         <tbody id="messages">
@@ -65,7 +68,9 @@
       <div class="input-group">
         <input type="text" class="form-control" id="m" placeholder="Type your message here..." tabindex="-1" disabled>
         <span class="input-group-btn">
-          <button class="btn btn-default" type="submit"><span class="glyphicon glyphicon-send"></span></button>
+          <button class="btn btn-default" type="submit" id="submit-button" disabled>
+            <span class="glyphicon glyphicon-send"></span>
+            </button>
         </span>
       </div>
     </form>
@@ -90,41 +95,55 @@
     </div><!-- /.modal -->
 
     <script>
+
+      /* SOCKET.IO */
+
       var socket = io();
       $('form').submit(function(){
-        if ($('#m').val())
+        if ($('#m').val() && nickname)
         {
           socket.emit('chat message', '<b>' + nickname + ':</b> ' + $('#m').val());
           $('#m').val('');
           $('#m').focus();
         }
+        else if (!nickname)
+        {
+          askForNickname();
+        }
         return false;
       });
       socket.on('chat message', function(msg){
         var shouldScrollDown = false;
-        // console.log($('#table-container').scrollTop() + ' vs ' + $('#table-container')[0].scrollHeight);
-        // if ($('#table-container').scrollTop() === $('#table-container').scrollHeight);
-        // {
-        //   shouldScrollDown = true;
-        // }
-        // $('#messages').append('<tr><td>' + msg + '</td></tr>');
-        // if (shouldScrollDown)
-        // {
-        //   $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
-        // }
-        msg = msg.replace(nickname, '<b style="color: #23527c;">' + nickname + '</b>');
+        msg = msg.replace('@' + nickname, '<b style="color: #23527c;">@' + nickname + '</b>');
         $('#messages').append('<tr><td>' + msg + '</td></tr>');
         if (shouldScrollDown)
         $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
       });
 
-      var nickname = "";
-      $('#nameModal').modal('show');
-      $('#nameModal-field').focus();
+      /* INPUT FIELD */
 
-      var nameModalField = $('#nameModal-field');
+      $('#m').on('input',function(e){
+        if ($('#m').val())
+        {
+          $('#submit-button').removeAttr('disabled');
+        }
+        else
+        {
+          $('#submit-button').attr('disabled','disabled');
+        }
+      });
+
+      /* NICKNAME & MODAL */
+
+      var nickname = "";
+      function askForNickname(){
+        $('#nameModal').modal('show');
+        $('#nameModal-field').focus();
+      }
+      askForNickname();
+
       $('#nameModal-field').on('input',function(e){
-        if (nameModalField.val())
+        if ($('#nameModal-field').val())
         {
           $('#nameModal-submit').removeAttr('disabled');
         }
@@ -134,7 +153,7 @@
         }
       });
 
-      $(nameModalField).keyup(function(event){
+      $($('#nameModal-field')).keyup(function(event){
         if(event.keyCode == 13)
         {
           $('#nameModal-submit').click();
@@ -142,13 +161,13 @@
       });
 
       $('#nameModal-submit').click( function(){
-        if (nameModalField.val())
+        if ($('#nameModal-field').val())
         {
-          nickname = nameModalField.val();
+          nickname = $('#nameModal-field').val();
           $('#nameModal').modal('hide');
           socket.emit('chat message', '<i><b>' + nickname + '</b> has joined the chat.</i>');
           $('#m').removeAttr('disabled');
-          nameModalField.attr('disabled','disabled');
+          $('#nameModal-field').attr('disabled','disabled');
           $('#m').focus();
         }
       });
