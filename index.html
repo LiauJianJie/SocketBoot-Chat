@@ -111,9 +111,10 @@
       /* SOCKET.IO */
 
       var socket = io();
+      var gottenNicknameBefore = false;
       // NICKNAME REQUEST
       socket.on('nickname-request', function(nicknameReply){
-        if (nicknameReply.nicknameAllowed)
+        if (nicknameReply.nicknameAllowed && !gottenNicknameBefore)
         {
           $('#nameModal').modal('hide');
           nickname = nicknameReply.nickname;
@@ -123,6 +124,7 @@
           $('#m').focus();
           $('#nameModal-formgroup').removeClass('has-error');
           $('#nameModal-danger').remove();
+          gottenNicknameBefore = true;
         }
         else
         {
