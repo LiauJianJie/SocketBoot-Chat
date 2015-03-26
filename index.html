@@ -63,7 +63,7 @@
     </div>
     <form action="">
       <div class="input-group">
-        <input type="text" class="form-control" id="m" placeholder="Type your message here..." disabled>
+        <input type="text" class="form-control" id="m" placeholder="Type your message here..." tabindex="-1" disabled>
         <span class="input-group-btn">
           <button class="btn btn-default" type="submit"><span class="glyphicon glyphicon-send"></span></button>
         </span>
@@ -79,7 +79,7 @@
             <h4 class="modal-title">What's your name?</h4>
           </div>
           <div class="modal-body">
-            <input type="text" class="form-control" id="nameModal-field" placeholder="My name is...">
+            <input type="text" class="form-control" id="nameModal-field" placeholder="My name is..." tabindex="-2">
           </div>
           <div class="modal-footer">
             <!-- <button type="button" class="btn btn-default" data-dismiss="modal">Close</button> -->
@@ -120,6 +120,7 @@
 
       var nickname = "";
       $('#nameModal').modal('show');
+      $('#nameModal-field').focus();
 
       var nameModalField = $('#nameModal-field');
       $('#nameModal-field').on('input',function(e){
