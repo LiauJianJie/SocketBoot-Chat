@@ -138,7 +138,7 @@
       });
       // USER JOINED
       socket.on('user-joined', function(joinedNickname){
-        _appendMessage('<i><b>' + nickname + '</b>' + ' has joined the chat.</i>');
+        _appendMessage('<i><b>' + joinedNickname + '</b>' + ' has joined the chat.</i>');
       });
       // SEND MESSAGE
       socket.on('send-message', function(message){
