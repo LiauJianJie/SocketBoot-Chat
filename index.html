@@ -63,7 +63,7 @@
     </div>
     <form action="">
       <div class="input-group">
-        <input type="text" class="form-control" id="m" placeholder="Type your message here...">
+        <input type="text" class="form-control" id="m" placeholder="Type your message here..." disabled>
         <span class="input-group-btn">
           <button class="btn btn-default" type="submit"><span class="glyphicon glyphicon-send"></span></button>
         </span>
@@ -146,6 +146,8 @@
           nickname = nameModalField.val();
           $('#nameModal').modal('hide');
           socket.emit('chat message', '<i><b>' + nickname + '</b> has joined the chat.</i>');
+          $('#m').removeAttr('disabled');
+          nameModalField.attr('disabled','disabled');
           $('#m').focus();
         }
       });
