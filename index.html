@@ -123,10 +123,8 @@
         return false;
       });
       socket.on('chat message', function(msg){
-        var shouldScrollDown = false;
         msg = msg.replace('@' + nickname, '<b style="color: #23527c;">@' + nickname + '</b>');
         $('#messages').append('<tr><td>' + msg + '</td></tr>');
-        if (shouldScrollDown)
         $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
       });
 
