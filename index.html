@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <title>Socket.IO chat</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <!-- /*<style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font: 13px Helvetica, Arial; }
       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
@@ -12,27 +12,144 @@
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
+    </style>*/ -->
+
+    <style>
+      form {
+        background: #eee;
+        padding: 15px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+      }
+      .borderless td, .borderless th {
+        border: none !important;
+      }
+      td {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+      }
+      table {
+        /*width: 100%;*/
+        margin-top: 10px !important;
+        margin-bottom: 0px !important;
+      }
+      #table-container {
+        width: 100%;
+        position: fixed;
+        top: 0;
+        bottom: 64px;
+        height:auto;
+        overflow-y:auto;
+      }
     </style>
+
     <!-- socket.io scripts -->
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <!-- jQuery script -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <!-- Bootstrap script & css -->
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
   </head>
 
   <body>
-    <ul id="messages"></ul>
+    <div id="table-container">
+      <table class="table table-hover table-condensed borderless">
+        <tbody id="messages">
+        </tbody>
+      </table>
+    </div>
     <form action="">
-      <input id="m" autocomplete="off"/><button>Send</button>
+      <div class="input-group">
+        <input type="text" class="form-control" id="m" placeholder="Type your message here...">
+        <span class="input-group-btn">
+          <button class="btn btn-default" type="submit"><span class="glyphicon glyphicon-send"></span></button>
+        </span>
+      </div>
     </form>
+
+    <!-- Modal -->
+    <div class="modal fade bs-example-modal-sm" id="nameModal" data-backdrop="static" data-keyboard="false">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> -->
+            <h4 class="modal-title">What's your name?</h4>
+          </div>
+          <div class="modal-body">
+            <input type="text" class="form-control" id="nameModal-field" placeholder="My name is...">
+          </div>
+          <div class="modal-footer">
+            <!-- <button type="button" class="btn btn-default" data-dismiss="modal">Close</button> -->
+            <button type="button" class="btn btn-primary" id="nameModal-submit" disabled>Start chatting!</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
     <script>
       var socket = io();
       $('form').submit(function(){
-        socket.emit('chat message', $('#m').val());
-        $('#m').val('');
+        if ($('#m').val())
+        {
+          socket.emit('chat message', '<b>' + nickname + ':</b> ' + $('#m').val());
+          $('#m').val('');
+          $('#m').focus();
+        }
         return false;
       });
       socket.on('chat message', function(msg){
-        $('#messages').append($('<li>').text(msg));
+        var shouldScrollDown = false;
+        // console.log($('#table-container').scrollTop() + ' vs ' + $('#table-container')[0].scrollHeight);
+        // if ($('#table-container').scrollTop() === $('#table-container').scrollHeight);
+        // {
+        //   shouldScrollDown = true;
+        // }
+        // $('#messages').append('<tr><td>' + msg + '</td></tr>');
+        // if (shouldScrollDown)
+        // {
+        //   $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
+        // }
+        msg = msg.replace(nickname, '<b style="color: #23527c;">' + nickname + '</b>');
+        $('#messages').append('<tr><td>' + msg + '</td></tr>');
+        if (shouldScrollDown)
+        $("#table-container").scrollTop($("#table-container")[0].scrollHeight);
       });
+
+      var nickname = "";
+      $('#nameModal').modal('show');
+
+      var nameModalField = $('#nameModal-field');
+      $('#nameModal-field').on('input',function(e){
+        if (nameModalField.val())
+        {
+          $('#nameModal-submit').removeAttr('disabled');
+        }
+        else
+        {
+          $('#nameModal-submit').attr('disabled','disabled');
+        }
+      });
+
+      $(nameModalField).keyup(function(event){
+        if(event.keyCode == 13)
+        {
+          $('#nameModal-submit').click();
+        }
+      });
+
+      $('#nameModal-submit').click( function(){
+        if (nameModalField.val())
+        {
+          nickname = nameModalField.val();
+          $('#nameModal').modal('hide');
+          socket.emit('chat message', '<i><b>' + nickname + '</b> has joined the chat.</i>');
+          $('#m').focus();
+        }
+      });
+
     </script>
   </body>
 </html>
