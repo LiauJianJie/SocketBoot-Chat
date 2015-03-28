@@ -4,6 +4,7 @@
   "description": "Socket.io + Bootstrap chat web application",
   "dependencies": {
     "express": "^4.10.2",
+    "lodash": "^3.6.0",
     "socket.io": "^1.3.5"
   }
 }
