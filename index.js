@@ -71,9 +71,7 @@ manager.clientDisconnect = function(socket){
     type: 'disconnect',
     nickname: manager._nicknameForSocket(socket)
   });
-  _.remove(manager.users, _.findIndex(manager.users, function(user){
-    return user.socketId == socket.id;
-  }));
+  _.remove(manager.users, {socketId: socket.id});
 };
 
 manager.clientRequestNickname = function(socket,nickname){
