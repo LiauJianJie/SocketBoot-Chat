@@ -15,7 +15,7 @@ db.once('open', function (callback) {
 
 // MESSAGE SCHEMA
 var messageSchema = mongoose.Schema({
-    channel: {type: String, default:'general'},
+    // channel: {type: String, default:'general'},
     date: {type: Date, default:Date.now},
     content: String
 });
@@ -23,7 +23,7 @@ var messageSchema = mongoose.Schema({
 var Message = mongoose.model('Message', messageSchema);
 
 var manager = {
-  users: [] // users: array of user{socketId,nickname}
+  users: [] // users: array of user{socketId,nickname,isTyping}
 };
 
 app.get('/', function(req, res){
@@ -38,15 +38,38 @@ app.get('/style.css', function(req, res){
 io.on('connection', function(socket){
   console.log(socket.id + ' connected ');
   manager.clientConnect(socket);
+  socket.emit('populate-ready');
 
-  // Mongoose Populate
-  Message.find({}, function (err, messages) {
-    if (err) { console.log(err); }
-    else if (!messages.length) {}
+  // POPULATE FROM MONGOOSE
+  socket.on('populate-request', function(date){
+    if (date)
+    {
+      Message.find({date: date})
+             .sort('date')
+             .exec(function(err, messages) {
+        if (err) { console.log(err); }
+        else if (!messages.length) {}
+        else
+        {
+          messages.forEach(function(message) {
+            socket.emit('message-populate', message);
+          });
+        }
+      });
+    }
     else
     {
-      messages.forEach(function (message) {
-        socket.emit('message-populate', message.content);
+      Message.find({})
+             .sort('date')
+             .exec(function(err, messages) {
+        if (err) { console.log(err); }
+        else if (!messages.length) {}
+        else
+        {
+          messages.forEach(function(message) {
+            socket.emit('message-populate', message);
+          });
+        }
       });
     }
   });
@@ -96,6 +119,11 @@ manager.clientConnect = function(socket){
     socketId: socket.id,
     nickname: null
   });
+  manager.askClientForNickname(socket);
+};
+
+manager.askClientForNickname = function(socket){
+  socket.emit('nickname-ask');
 };
 
 manager.clientDisconnect = function(socket){
@@ -160,24 +188,35 @@ manager.clientJoined = function(socket){
 };
 
 manager.messageSend = function(socket,content){
+  var latestDate = manager._storeAdd('<b>' + manager._nicknameForSocket(socket) + ':</b> ' + content);
+  console.log('latestDate: ' + latestDate);
   io.emit('message-received', {
     nickname: manager._nicknameForSocket(socket),
-    content: content
+    content: content,
+    date: latestDate
   });
-  manager._storeAdd('<b>' + manager._nicknameForSocket(socket) + ':</b> ' + content);
+};
+
+manager.updateTypingStatus = function(socket){
+  // Typing status changes when
+  // - user starts typing
+  // - user stops typing
+  // - user disconnects
+  // - user idle
 };
 
 /* HELPER FUNCTIONS */
 
 manager._storeAdd = function(content){
-  var message = new Message({
-    content: content
+  message = new Message({
+    content: content,
   });
   message.save(function (err, message)
   {
     if (err)
       return console.error(err);
   });
+  return message.date;
 };
 
 manager._nicknameForSocket = function(socket){

@@ -24,6 +24,8 @@
     <!-- Bootstrap script & css -->
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap growl -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-growl/1.0.6/bootstrap-growl.min.js"></script>
     <!-- custom style -->
     <link href="style.css" type="text/css" rel="stylesheet">
   </head>
@@ -32,7 +34,7 @@
 
 
     <div id="table-container">
-      <table class="table table-hover table-condensed borderless">
+      <table class="table table-condensed borderless">
         <tbody id="messages">
         </tbody>
       </table>
@@ -73,9 +75,10 @@
 
       var user = {
         nickname: null,
-        socketId: null
+        socketId: null,
+        lastMessageDate: null
       };
-      _askUserForNickname();
+      // _askUserForNickname();
 
       /* SOCKET.IO */
 
@@ -88,11 +91,17 @@
        * connection: type, nickname
        */
 
+      // POPULATION REQUEST
+      socket.on('populate-ready',function(){
+        socket.emit('populate-request',user.date);
+      });
+
       // NICKNAME REQUEST RESPONSE
       socket.on('nickname-request', function(response){
         if (response.nicknameAllowed)
         {
           user.nickname = response.nickname;
+          $('#nameModal').modal('hide');
           _enableMessageTyping();
           socket.emit('joined');
         }
@@ -106,22 +115,41 @@
       socket.on('status', function(data){
         if (data.type === 'join')
         {
-          _appendMessage('<i><b>' + data.nickname + '</b> has joined the chatroom.</i>');
+          _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has joined the chatroom.</i>');
         }
         else if (data.type === 'disconnect')
         {
-          _appendMessage('<i><b>' + data.nickname + '</b> has left the chatroom.</i>');
+          _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has left the chatroom.</i>');
         }
+      });
+
+      socket.on('disconnect', function(){
+        _disableMessageTyping();
+        _appendMessage('<i class="text-danger">You have lost connection with ' +
+                       'the server. You will be made to choose your nickname ' +
+                       'again when the connection is restored.</i>');
       });
 
       // POPULATE WITH MESSAGES
       socket.on('message-populate', function(message){
-        _appendMessage('<p style="color:#999; margin: 0;">' + message + '</p>');
+        if (message.date > user.lastMessageDate || !user.lastMessageDate)
+        {
+          console.log(message.date + ' > ' + user.lastMessageDate);
+          _appendMessage('<p style="color:#999; margin: 0;">' + message.content + '</p>');
+          user.lastMessageDate = message.date;
+        }
+        else
+          console.log(message.date + ' < ' + user.lastMessageDate);
+      });
+
+      socket.on('nickname-ask', function(){
+        _askUserForNickname();
       });
 
       // MESSAGE RECEIVE
       socket.on('message-received', function(message){
         _appendMessage('<b>' + message.nickname + ':</b> ' + message.content);
+        user.lastMessageDate = message.date;
       });
 
       /* SEND MANAGER */
@@ -145,30 +173,42 @@
         rejected = typeof rejected !== 'undefined' ? rejected : 'not rejected';
         if (rejected !== 'rejected')
         {
-          $('#nameModal').modal('show');
-          $('#nameModal-field').focus();
-          $('#nameModal-submit').removeAttr('disabled');
-          $('#nameModal-helper').remove();
+          _disableMessageTyping();
+          _enableNicknameForm();
+
         }
         else
         {
-          $('#nameModal-formgroup').addClass('has-error');
-          $('#nameModal-submit').removeAttr('disabled');
-          $('#nameModal-field').removeAttr('disabled');
-          $('#nameModal-field').focus();
-          if ($('#nameModal-helper').length === 0)
-          {
-            $('#nameModal-field').after('<span class="help-block" id="nameModal-helper">This nickname is unavailable.</span>');
-          }
+          _disableMessageTyping();
+          _enableNicknameForm(true);
         }
       }
 
       function _enableMessageTyping(){
-        $('#nameModal').modal('hide');
-        $('#nameModal-field').attr('disabled','disabled');
-        $('#nameModal-submit').attr('disabled','disabled');
         $('#m').removeAttr('disabled');
         $('#m').focus();
+      }
+
+      function _disableMessageTyping(){
+        $('#m').attr('disabled','disabled');
+        $('#submit-button').attr('disabled','disabled');
+      }
+
+      function _enableNicknameForm(needError){
+        $('#nameModal').modal('show');
+        $('#nameModal-submit').removeAttr('disabled');
+        $('#nameModal-field').removeAttr('disabled');
+        if ($('#nameModal-helper').length === 0 && needError)
+          $('#nameModal-field').after('<span class="help-block" id="nameModal-helper">This nickname is unavailable.</span>');
+        if (needError)
+          $('#nameModal-formgroup').addClass('has-error');
+        $('#nameModal-field').focus();
+      }
+
+      function _disableNicknameForm(){
+        $('#nameModal-submit').attr('disabled','disabled');
+        $('#nameModal-field').attr('disabled','disabled');
+        $('#nameModal-helper').remove();
       }
 
       /* MESSAGE INPUT FIELD */
