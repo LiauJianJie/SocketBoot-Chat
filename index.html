@@ -19,6 +19,8 @@
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <!-- jQuery script -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <!-- lodash script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.5.0/lodash.min.js"></script>
     <!-- Bootstrap script & css -->
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
@@ -78,6 +80,7 @@
       /* SOCKET.IO */
 
       var socket = io();
+      var manager = {};
 
       /* CLIENT MESSAGES
        * nickname-request: nicknameAllowed, socketId, nickname
@@ -116,6 +119,16 @@
         _appendMessage('<b>' + message.nickname + ':</b> ' + message.content);
       });
 
+      /* SEND MANAGER */
+
+      manager.sendMessage = function(content){
+        socket.emit('message-send', _.escape(content));
+      };
+
+      manager.requestNickname = function(nickname){
+        socket.emit('nickname-request', nickname);
+      };
+
       /* HELPER FUNCTIONS */
 
       function _appendMessage(message){
@@ -138,7 +151,7 @@
           $('#nameModal-submit').removeAttr('disabled');
           $('#nameModal-field').removeAttr('disabled');
           $('#nameModal-field').focus();
-          if ($('#nameModal-helper').length == 0)
+          if ($('#nameModal-helper').length === 0)
           {
             $('#nameModal-field').after('<span class="help-block" id="nameModal-helper">This nickname is unavailable.</span>');
           }
@@ -158,7 +171,7 @@
       $('form').submit(function(){
         if ($('#m').val() && user.nickname)
         {
-          socket.emit('message-send', $('#m').val());
+          manager.sendMessage($('#m').val());
           $('#m').val('');
           $('#m').focus();
         }
@@ -204,7 +217,7 @@
         if ($('#nameModal-field').val())
         {
           $('#nameModal-field').attr('disabled','disabled');
-          socket.emit('nickname-request', $('#nameModal-field').val());
+          manager.requestNickname($('#nameModal-field').val());
         }
       });
 

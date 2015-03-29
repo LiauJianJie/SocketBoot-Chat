@@ -1,7 +1,12 @@
 var app = require('express')();
 var _ = require('lodash');
 var http = require('http').Server(app);
+// var MongoStore = require('mong.socket.io');
 var io = require('socket.io')(http);
+// var app = express.createServer();
+// io = io.listen(app);
+
+// app.listen(8000);
 
 var manager = {
   users: [] // users: array of user{socketId,nickname}
@@ -14,6 +19,12 @@ app.get('/', function(req, res){
 app.get('/style.css', function(req, res){
   res.sendFile(__dirname + '/style.css');
 });
+
+// io.configure(function() {
+//     var store = new MongoStore({url: process.env.MONGOLAB_URI || 'mongodb://localhost:27017/socketboot_chat'});
+//     store.on('error', console.error);
+//     io.set('store', store);
+// });
 
 // NEW CONNECTION
 io.on('connection', function(socket){
@@ -140,8 +151,8 @@ manager._nicknameForSocket = function(socket){
 
 manager._indexForSocket = function(socket){
   return _.findIndex(manager.users, 'socketId', socket.id);
-}
+};
 
 manager._indexForNickname = function(nickname){
   return _.findIndex(manager.users, 'nickname', nickname);
-}
+};
