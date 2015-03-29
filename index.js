@@ -1,12 +1,26 @@
 var app = require('express')();
 var _ = require('lodash');
 var http = require('http').Server(app);
-// var MongoStore = require('mong.socket.io');
 var io = require('socket.io')(http);
-// var app = express.createServer();
-// io = io.listen(app);
+var mongoose = require('mongoose');
 
-// app.listen(8000);
+/* MONGOOSE */
+
+mongoose.connect(process.env.MONGOLAB_URI || 'mongodb://localhost/socketboot_chat');
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function (callback) {
+  console.log('MongoDB open');
+});
+
+// MESSAGE SCHEMA
+var messageSchema = mongoose.Schema({
+    channel: {type: String, default:'general'},
+    date: {type: Date, default:Date.now},
+    content: String
+});
+
+var Message = mongoose.model('Message', messageSchema);
 
 var manager = {
   users: [] // users: array of user{socketId,nickname}
@@ -20,16 +34,22 @@ app.get('/style.css', function(req, res){
   res.sendFile(__dirname + '/style.css');
 });
 
-// io.configure(function() {
-//     var store = new MongoStore({url: process.env.MONGOLAB_URI || 'mongodb://localhost:27017/socketboot_chat'});
-//     store.on('error', console.error);
-//     io.set('store', store);
-// });
-
 // NEW CONNECTION
 io.on('connection', function(socket){
   console.log(socket.id + ' connected ');
   manager.clientConnect(socket);
+
+  // Mongoose Populate
+  Message.find({}, function (err, messages) {
+    if (err) { console.log(err); }
+    else if (!messages.length) {}
+    else
+    {
+      messages.forEach(function (message) {
+        socket.emit('message-populate', message.content);
+      });
+    }
+  });
 
   // DISCONNECT
   socket.on('disconnect', function(){
@@ -51,6 +71,7 @@ io.on('connection', function(socket){
 
   // MESSAGE SEND FROM CLIENT
   socket.on('message-send', function(content){
+    console.log(content);
     console.log(socket.id + ': ' + content);
     manager.messageSend(socket, content);
   });
@@ -78,10 +99,15 @@ manager.clientConnect = function(socket){
 };
 
 manager.clientDisconnect = function(socket){
-  io.emit('status',{
-    type: 'disconnect',
-    nickname: manager._nicknameForSocket(socket)
-  });
+  var nickname = manager._nicknameForSocket(socket);
+  if (nickname)
+  {
+    io.emit('status',{
+      type: 'disconnect',
+      nickname: nickname
+    });
+    manager._storeAdd('<i><b>' + nickname + '</b> has left the chatroom.</i>');
+  }
   _.remove(manager.users, {socketId: socket.id});
 };
 
@@ -109,7 +135,7 @@ manager.nicknameRegister = function(socket,nickname){
       nickname: nickname
     });
     io.emit('user-joined', nickname);
-    console.log(socket.id + ' nickname is now ' + nickname);
+
   }
   else
   {
@@ -130,6 +156,7 @@ manager.clientJoined = function(socket){
     type: 'join',
     nickname: manager._nicknameForSocket(socket)
   });
+  manager._storeAdd('<i><b>' + manager._nicknameForSocket(socket) + '</b> has joined the chatroom.</i>');
 };
 
 manager.messageSend = function(socket,content){
@@ -137,9 +164,21 @@ manager.messageSend = function(socket,content){
     nickname: manager._nicknameForSocket(socket),
     content: content
   });
+  manager._storeAdd('<b>' + manager._nicknameForSocket(socket) + ':</b> ' + content);
 };
 
 /* HELPER FUNCTIONS */
+
+manager._storeAdd = function(content){
+  var message = new Message({
+    content: content
+  });
+  message.save(function (err, message)
+  {
+    if (err)
+      return console.error(err);
+  });
+};
 
 manager._nicknameForSocket = function(socket){
   var _index = manager._indexForSocket(socket);

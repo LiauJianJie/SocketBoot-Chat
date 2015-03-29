@@ -114,6 +114,11 @@
         }
       });
 
+      // POPULATE WITH MESSAGES
+      socket.on('message-populate', function(message){
+        _appendMessage('<p style="color:#999; margin: 0;">' + message + '</p>');
+      });
+
       // MESSAGE RECEIVE
       socket.on('message-received', function(message){
         _appendMessage('<b>' + message.nickname + ':</b> ' + message.content);
