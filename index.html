@@ -259,6 +259,7 @@
           $('#m').val('');
           $('#m').focus();
           $('#submit-button').attr('disabled','disabled');
+          socket.emit('update-typing-status', false);
         }
         else if (!user.nickname)
         {
