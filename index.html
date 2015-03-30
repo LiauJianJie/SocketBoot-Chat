@@ -112,15 +112,12 @@
       });
 
       // CONNECTION NOTICE
-      socket.on('status', function(data){
-        if (data.type === 'join')
-        {
-          _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has joined the chatroom.</i>');
-        }
-        else if (data.type === 'disconnect')
-        {
-          _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has left the chatroom.</i>');
-        }
+      socket.on('status:join', function(data){
+        _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has joined the chatroom.</i>');
+      });
+
+      socket.on('status:disconnect', function(data){
+        _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has left the chatroom.</i>');
       });
 
       socket.on('disconnect', function(){
