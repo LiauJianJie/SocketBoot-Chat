@@ -131,6 +131,7 @@ manager.clientDisconnect = function(socket){
   if (nickname)
   {
     io.emit('status:disconnect',{
+      date: latestDate,
       nickname: nickname
     });
     manager._storeAdd('<i><b>' + nickname + '</b> has left the chatroom.</i>');
@@ -180,6 +181,7 @@ manager.denyNickname = function(socket,nickname){
 
 manager.clientJoined = function(socket){
   io.emit('status:join',{
+    date: latestDate,
     nickname: manager._nicknameForSocket(socket)
   });
   manager._storeAdd('<i><b>' + manager._nicknameForSocket(socket) + '</b> has joined the chatroom.</i>');
