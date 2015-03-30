@@ -36,3 +36,15 @@ html, body {
   margin: 0;
   padding: 0;
 }
+
+.chatlog-old, .chatlog-typingstatus {
+  margin: 0;
+}
+
+.chatlog-old {
+  color: #aaa;
+}
+
+.chatlog-typingstatus {
+  color: #666;
+}

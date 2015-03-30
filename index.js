@@ -78,6 +78,7 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     console.log(socket.id + ' disconnected ');
     manager.clientDisconnect(socket);
+    manager.updateTypingStatusText();
   });
 
   // NICKNAME REQUEST
@@ -94,9 +95,17 @@ io.on('connection', function(socket){
 
   // MESSAGE SEND FROM CLIENT
   socket.on('message-send', function(content){
-    console.log(content);
     console.log(socket.id + ': ' + content);
     manager.messageSend(socket, content);
+  });
+
+  // TYPING STATUS
+  socket.on('update-typing-status', function(isTyping){
+    manager.updateTypingStatus(socket, isTyping);
+  });
+
+  socket.on('request-typing-status', function(){
+    manager.updateTypingStatusText();
   });
 
 });
@@ -130,11 +139,12 @@ manager.clientDisconnect = function(socket){
   var nickname = manager._nicknameForSocket(socket);
   if (nickname)
   {
+    var latestDate = manager._storeAdd('<i><b>' + nickname + '</b> has left the chatroom.</i>');
     io.emit('status',{
       type: 'disconnect',
+      date: latestDate,
       nickname: nickname
     });
-    manager._storeAdd('<i><b>' + nickname + '</b> has left the chatroom.</i>');
   }
   _.remove(manager.users, {socketId: socket.id});
 };
@@ -180,16 +190,16 @@ manager.denyNickname = function(socket,nickname){
 };
 
 manager.clientJoined = function(socket){
+  var latestDate = manager._storeAdd('<i><b>' + manager._nicknameForSocket(socket) + '</b> has joined the chatroom.</i>');
   io.emit('status',{
     type: 'join',
+    date: latestDate,
     nickname: manager._nicknameForSocket(socket)
   });
-  manager._storeAdd('<i><b>' + manager._nicknameForSocket(socket) + '</b> has joined the chatroom.</i>');
 };
 
 manager.messageSend = function(socket,content){
   var latestDate = manager._storeAdd('<b>' + manager._nicknameForSocket(socket) + ':</b> ' + content);
-  console.log('latestDate: ' + latestDate);
   io.emit('message-received', {
     nickname: manager._nicknameForSocket(socket),
     content: content,
@@ -197,12 +207,29 @@ manager.messageSend = function(socket,content){
   });
 };
 
-manager.updateTypingStatus = function(socket){
+manager.updateTypingStatus = function(socket,isTyping){
+  if ((typeof socket !== typeof undefined && socket !== false) &&
+      (typeof manager.users !== typeof undefined && manager.users !== false))
+  {
+    var socketIndex = manager._indexForSocket(socket);
+    var user = manager.users[socketIndex];
+    user.isTyping = isTyping;
+    manager.users.splice(socketIndex, 1, user);
+    manager.updateTypingStatusText();
+  }
+};
+
+manager.updateTypingStatusText = function(){
   // Typing status changes when
   // - user starts typing
   // - user stops typing
   // - user disconnects
-  // - user idle
+  // - user idle (?)
+
+  var nicknames = [];
+  if (typeof manager.users !== typeof undefined && manager.users !== false)
+    nicknames = _.pluck(_.filter(manager.users, 'isTyping', true), 'nickname');
+  io.emit('users-typing',nicknames);
 };
 
 /* HELPER FUNCTIONS */

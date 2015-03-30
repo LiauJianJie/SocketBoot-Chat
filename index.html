@@ -37,6 +37,11 @@
       <table class="table table-condensed borderless">
         <tbody id="messages">
         </tbody>
+        <tfoot>
+          <tr>
+            <td id="typing-status"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
     <form action="">
@@ -94,6 +99,7 @@
       // POPULATION REQUEST
       socket.on('populate-ready',function(){
         socket.emit('populate-request',user.date);
+        socket.emit('request-typing-status');
       });
 
       // NICKNAME REQUEST RESPONSE
@@ -116,10 +122,12 @@
         if (data.type === 'join')
         {
           _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has joined the chatroom.</i>');
+          user.lastMessageDate = data.date;
         }
         else if (data.type === 'disconnect')
         {
           _appendMessage('<i class="text-info"><b>' + data.nickname + '</b> has left the chatroom.</i>');
+          user.lastMessageDate = data.date;
         }
       });
 
@@ -135,7 +143,7 @@
         if (message.date > user.lastMessageDate || !user.lastMessageDate)
         {
           console.log(message.date + ' > ' + user.lastMessageDate);
-          _appendMessage('<p style="color:#999; margin: 0;">' + message.content + '</p>');
+          _appendMessage('<p class="chatlog-old">' + message.content + '</p>');
           user.lastMessageDate = message.date;
         }
         else
@@ -143,6 +151,7 @@
       });
 
       socket.on('nickname-ask', function(){
+        user.nickname = null;
         _askUserForNickname();
       });
 
@@ -150,6 +159,35 @@
       socket.on('message-received', function(message){
         _appendMessage('<b>' + message.nickname + ':</b> ' + message.content);
         user.lastMessageDate = message.date;
+      });
+
+      // USERS TYPING
+      socket.on('users-typing', function(nicknames){
+        if (typeof user.nickname !== typeof undefined && user.nickname !== false)
+          nicknames = _.remove(nicknames, function(nickname) {
+            return nickname !== user.nickname;
+          });
+        var statusString = '';
+        if (nicknames.length > 1)
+        {
+          _.each(nicknames, function(nickname, index){
+            if (index === 0)
+              statusString = nickname;
+            else if (index === nicknames.length-1)
+              statusString = statusString + ' and ' + nickname;
+            else
+              statusString = statusString + ', ' + nickname;
+          });
+          statusString = statusString + ' are typing...';
+        }
+        else if (nicknames.length === 1)
+          statusString = nicknames[0] + ' is typing...';
+
+        if (statusString.length > 0)
+          statusString = '<i class="chatlog-typingstatus">' + statusString + '</i>';
+
+        $('#typing-status').html(statusString);
+        $('#table-container').scrollTop($('#table-container')[0].scrollHeight);
       });
 
       /* SEND MANAGER */
@@ -192,6 +230,7 @@
       function _disableMessageTyping(){
         $('#m').attr('disabled','disabled');
         $('#submit-button').attr('disabled','disabled');
+        $('#m').blur();
       }
 
       function _enableNicknameForm(needError){
@@ -219,6 +258,7 @@
           manager.sendMessage($('#m').val());
           $('#m').val('');
           $('#m').focus();
+          $('#submit-button').attr('disabled','disabled');
         }
         else if (!user.nickname)
         {
@@ -228,13 +268,22 @@
       });
 
       $('#m').on('input',function(e){
+        var attr = $('#submit-button').attr('disabled');
         if ($('#m').val())
         {
-          $('#submit-button').removeAttr('disabled');
+          if (typeof attr !== typeof undefined && attr !== false)
+          {
+            $('#submit-button').removeAttr('disabled');
+            socket.emit('update-typing-status', true);
+          }
         }
         else
         {
-          $('#submit-button').attr('disabled','disabled');
+          if (typeof attr == typeof undefined || attr === false)
+          {
+            $('#submit-button').attr('disabled','disabled');
+            socket.emit('update-typing-status', false);
+          }
         }
       });
 
